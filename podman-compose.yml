@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: conference_web
+    ports:
+      - "8080:80"
+    volumes:
+      - ./src:/var/www/html
+      - ./src/uploads:/var/www/html/uploads
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db
+      - DB_USER=conference_user
+      - DB_PASS=conference_pass
+      - DB_NAME=conference_db
+    networks:
+      - conference_network
+
+  db:
+    image: mysql:8.0
+    container_name: conference_db
+    restart: always
+    environment:
+      MYSQL_DATABASE: conference_db
+      MYSQL_USER: conference_user
+      MYSQL_PASSWORD: conference_pass
+      MYSQL_ROOT_PASSWORD: root_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - conference_network
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: conference_phpmyadmin
+    restart: always
+    ports:
+      - "8081:80"
+    environment:
+      - PMA_HOST=db
+      - PMA_USER=root
+      - PMA_PASSWORD=root_password
+    depends_on:
+      - db
+    networks:
+      - conference_network
+
+volumes:
+  db_data:
+
+networks:
+  conference_network:
+    driver: bridge
