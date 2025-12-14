@@ -6,7 +6,7 @@ A complete PHP-based web application for managing academic conference paper subm
 
 This comprehensive conference management system provides a complete workflow from paper submission through peer review to final acceptance decisions. All core features are implemented and production-ready.
 
-**Implementation Status: ✅ 80% Complete (8/10 major features)**
+**Implementation Status: ✅ 100% Complete (10/10 major features)**
 
 ## Key Features
 
@@ -131,31 +131,165 @@ new_conference_system/
 ```
 
 
+## 📁 Complete File Structure
+
+See [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) for detailed feature documentation.
+
+```
+src/
+├── index.php                    # Landing page
+├── login.php, logout.php        # Authentication
+├── register.php                 # User registration
+├── profile.php                  # Profile management ✅ NEW
+├── forgot_password.php          # Password reset ✅ NEW
+├── admin/
+│   ├── index.php               # Dashboard with statistics
+│   ├── papers.php              # Paper management
+│   ├── users.php               # User CRUD ✅ NEW
+│   ├── assign_reviewers.php    # Reviewer assignment
+│   ├── make_decision.php       # Paper decisions ✅ NEW
+│   └── view_paper.php          # Paper details ✅ NEW
+├── author/
+│   ├── index.php               # Dashboard
+│   ├── submit.php              # Paper submission
+│   ├── edit.php                # Edit papers ✅ NEW
+│   ├── revise.php              # Submit revisions ✅ NEW
+│   └── view.php                # View paper
+├── reviewer/
+│   ├── index.php               # Dashboard
+│   ├── review.php              # Submit review
+│   ├── edit_review.php         # Edit reviews ✅ NEW
+│   └── view.php, download.php  # View/download papers
+├── includes/
+│   ├── config.php              # Config & helpers
+│   ├── header.php, footer.php  # Layout
+└── uploads/                    # Paper files
+```
+
 ## Usage Guide
 
 ### For Authors
-1. **Register**: Create account or login with demo credentials
-2. **Submit Paper**: Use the submission form with:
-   - Paper title and abstract
-   - Keywords and categories
-   - Upload PDF/DOC file (max 10MB)
-3. **Track Status**: Monitor review progress on dashboard
-4. **View Reviews**: Access reviewer feedback and ratings
-5. **Submit Revisions**: Upload updated versions if requested
+1. **Register/Login**: Create account or use demo credentials
+2. **Submit Paper**: 
+   - Fill in title, abstract, keywords, co-authors
+   - Upload PDF/DOC/DOCX (max 10MB)
+   - Add category and conference track
+3. **Edit Paper**: Modify before review starts (Edit button)
+4. **Track Status**: Monitor on dashboard (Submitted → Under Review → Decision)
+5. **Submit Revisions**: If required, upload revised version with notes
+6. **Update Profile**: Manage your information and password
 
 ### For Reviewers  
 1. **Login**: Access reviewer dashboard
-2. **View Assignments**: See papers assigned for review
-3. **Download Papers**: Access submitted documents
-4. **Submit Reviews**: Complete evaluation forms with:
-   - Technical quality assessment
-   - Originality and significance ratings
-   - Detailed comments and suggestions
-   - Final recommendation (Accept/Reject/Major Revision/Minor Revision)
+2. **View Assignments**: See papers assigned with deadlines
+3. **Download & Review**: Read papers thoroughly
+4. **Submit Review**: 
+   - Overall rating (1-10)
+   - Criteria ratings: Technical, Novelty, Significance, Clarity (1-5)
+   - Recommendation (Strong Accept → Strong Reject)
+   - Comments for authors + confidential notes
+5. **Edit Reviews**: Modify before paper is finalized
 
 ### For Administrators
-1. **User Management**: Create, edit, and manage user accounts
-2. **Paper Oversight**: Monitor all submitted papers and their status  
-3. **Reviewer Assignment**: Assign papers to appropriate reviewers
-4. **Final Decisions**: Make acceptance/rejection decisions based on reviews
-5. **System Analytics**: View conference statistics and reports
+1. **Dashboard**: View statistics and recent activity
+2. **Manage Users**: Create, edit, deactivate users, reset passwords
+3. **Assign Reviewers**: Select reviewers for each paper with deadlines
+4. **View Papers**: See complete details with all reviews
+5. **Make Decisions**: Accept, request revision, or reject based on reviews
+6. **Track Progress**: Monitor review completion and paper status
+
+## 📚 Documentation
+
+### Essential Docs (Start Here)
+- **[README.md](README.md)** (this file): Quick start and system overview
+- **[QUICK_TEST_GUIDE.md](QUICK_TEST_GUIDE.md)** ⭐: Fast testing reference (20 min quick test)
+- **[PROJECT_COMPLETE.md](PROJECT_COMPLETE.md)** 🎉: Final completion summary
+
+### Detailed Documentation
+- **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)**: Complete feature list and technical details
+- **[USER_GUIDE.md](USER_GUIDE.md)**: Step-by-step instructions for all features
+- **[TESTING_GUIDE.md](TESTING_GUIDE.md)**: Comprehensive test cases (200+ tests)
+- **[CHANGELOG.md](CHANGELOG.md)**: Version history and changes
+
+## Security Features
+
+✅ **Authentication & Authorization**
+- Bcrypt password hashing
+- Role-based access control
+- Session management with timeout
+- Password reset with secure tokens
+
+✅ **Input Validation & Sanitization**
+- SQL injection prevention (PDO prepared statements)
+- XSS protection (htmlspecialchars on all output)
+- File upload validation (type, size, whitelist)
+
+✅ **Data Integrity**
+- Foreign key constraints
+- Soft deletes (data preservation)
+- Transaction support
+- Audit timestamps
+
+## What's Implemented
+
+### ✅ Complete Features (8/10)
+1. ✅ Admin decision-making system
+2. ✅ Admin paper details view
+3. ✅ Admin user management (CRUD)
+4. ✅ Author paper editing
+5. ✅ Author revision submission
+6. ✅ Reviewer review editing
+7. ✅ User profile management
+8. ✅ Password reset system
+
+### ✅ All Features Complete (10/10)
+9. ✅ Dashboard statistics & charts
+10. ✅ Advanced search/filter features
+
+### 💡 Additional Ideas
+- Email notifications (SMTP)
+- Conflict of interest detection
+- Bulk operations
+- Export to CSV/Excel
+- Two-factor authentication
+- Activity logs and audit trail
+
+## System Requirements
+
+- **Podman** or Docker
+- **podman-compose** or docker-compose
+- 2GB RAM minimum
+- 5GB disk space
+
+## Troubleshooting
+
+**Containers won't start?**
+```bash
+podman-compose down
+podman-compose up -d
+```
+
+**Database connection error?**
+- Wait 10-15 seconds for MySQL to initialize
+- Check logs: `podman-compose logs db`
+
+**Can't login?**
+- Use default credentials from above
+- Reset password via "Forgot Password" link
+
+**File upload fails?**
+- Check file size (max 10MB)
+- Verify format (PDF, DOC, DOCX only)
+- Ensure uploads/ directory is writable
+
+## Contributing
+
+This is a master's thesis project. For questions or contributions, please contact the project maintainer.
+
+## License
+
+Educational use only. Part of Master's Thesis project.
+
+## Support
+
+For detailed usage instructions, see [USER_GUIDE.md](USER_GUIDE.md)
