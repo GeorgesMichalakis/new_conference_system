@@ -10,9 +10,9 @@ $success = '';
 $stmt = $pdo->prepare("
     SELECT r.*, p.title as paper_title, p.abstract, ra.status as assignment_status
     FROM reviews r
-    JOIN review_assignments ra ON r.assignment_id = ra.id
-    JOIN papers p ON ra.paper_id = p.id
-    WHERE r.id = ? AND ra.reviewer_id = ?
+    JOIN papers p ON r.paper_id = p.id
+    JOIN reviewer_assignments ra ON r.paper_id = ra.paper_id AND r.reviewer_id = ra.reviewer_id
+    WHERE r.id = ? AND r.reviewer_id = ?
 ");
 $stmt->execute([$review_id, $_SESSION['user_id']]);
 $review = $stmt->fetch();
@@ -26,10 +26,9 @@ if (!$review) {
 $stmt = $pdo->prepare("
     SELECT p.status 
     FROM papers p 
-    JOIN review_assignments ra ON p.id = ra.paper_id 
-    WHERE ra.id = ?
+    WHERE p.id = ?
 ");
-$stmt->execute([$review['assignment_id']]);
+$stmt->execute([$review['paper_id']]);
 $paper_status = $stmt->fetchColumn();
 
 if (!in_array($paper_status, ['under_review', 'revision_required'])) {

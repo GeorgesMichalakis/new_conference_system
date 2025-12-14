@@ -29,40 +29,127 @@ $submissions_timeline = $pdo->query("
 
 // Get reviewer workload
 $reviewer_workload = $pdo->query("
-    SELECT u.first_name, u.last_name,
-           COUNT(ra.id) as assigned,
-           COUNT(r.id) as completed
+    SELECT u.first_name, u.last_name, u.institution,
+           COUNT(DISTINCT ra.id) as assigned,
+           COUNT(DISTINCT r.id) as completed
     FROM users u
-    LEFT JOIN review_assignments ra ON u.id = ra.reviewer_id
-    LEFT JOIN reviews r ON ra.id = r.assignment_id AND r.review_status = 'completed'
+    INNER JOIN reviewer_assignments ra ON u.id = ra.reviewer_id
+    LEFT JOIN reviews r ON ra.paper_id = r.paper_id AND ra.reviewer_id = r.reviewer_id AND r.review_status = 'completed'
     WHERE u.role = 'reviewer' AND u.is_active = 1
-    GROUP BY u.id, u.first_name, u.last_name
-    ORDER BY assigned DESC
+    GROUP BY u.id, u.first_name, u.last_name, u.institution
+    HAVING assigned > 0
+    ORDER BY assigned DESC, completed DESC
     LIMIT 10
 ")->fetchAll();
 ?>
 
 <h2>Admin Dashboard</h2>
 
-<div class="admin-stats">
-    <div class="stat-card">
-        <h3>Papers</h3>
+<style>
+.stats-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 1rem;
+    margin: 2rem 0;
+}
+
+.stat-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-align: center;
+    border-top: 4px solid #3498db;
+    transition: transform 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.stat-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.stat-number {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.stat-label {
+    color: #7f8c8d;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-breakdown {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    justify-content: center;
+}
+
+.badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white;
+}
+
+.badge-blue { background-color: #3498db; }
+.badge-orange { background-color: #f39c12; }
+.badge-green { background-color: #2ecc71; }
+.badge-red { background-color: #e74c3c; }
+.badge-gray { background-color: #95a5a6; }
+
+@media (max-width: 768px) {
+    .stats-grid { grid-template-columns: 1fr; }
+}
+</style>
+
+<div class="stats-grid">
+    <div class="stat-card" style="border-top-color: #3498db;">
+        <div class="stat-icon">📄</div>
         <div class="stat-number"><?php echo $stats['total_papers']; ?></div>
-        <div class="stat-details">
-            <div>Submitted: <?php echo $stats['submitted_papers']; ?></div>
-            <div>Under Review: <?php echo $stats['under_review_papers']; ?></div>
-            <div>Accepted: <?php echo $stats['accepted_papers']; ?></div>
-            <div>Rejected: <?php echo $stats['rejected_papers']; ?></div>
+        <div class="stat-label">Total Papers</div>
+        <div class="stat-breakdown">
+            <span class="badge badge-blue"><?php echo $stats['submitted_papers']; ?> Submitted</span>
+            <span class="badge badge-orange"><?php echo $stats['under_review_papers']; ?> Review</span>
+            <span class="badge badge-green"><?php echo $stats['accepted_papers']; ?> Accepted</span>
+            <span class="badge badge-red"><?php echo $stats['rejected_papers']; ?> Rejected</span>
         </div>
     </div>
     
-    <div class="stat-card">
-        <h3>Users</h3>
-        <div class="stat-number"><?php echo $stats['total_authors'] + $stats['total_reviewers']; ?></div>
-        <div class="stat-details">
-            <div>Authors: <?php echo $stats['total_authors']; ?></div>
-            <div>Reviewers: <?php echo $stats['total_reviewers']; ?></div>
-        </dicharts-section">
+    <div class="stat-card" style="border-top-color: #9b59b6;">
+        <div class="stat-icon">✍️</div>
+        <div class="stat-number"><?php echo $stats['total_authors']; ?></div>
+        <div class="stat-label">Authors</div>
+    </div>
+    
+    <div class="stat-card" style="border-top-color: #e67e22;">
+        <div class="stat-icon">👥</div>
+        <div class="stat-number"><?php echo $stats['total_reviewers']; ?></div>
+        <div class="stat-label">Reviewers</div>
+    </div>
+    
+    <div class="stat-card" style="border-top-color: #16a085;">
+        <div class="stat-icon">📝</div>
+        <div class="stat-number"><?php echo $stats['completed_reviews']; ?></div>
+        <div class="stat-label">Reviews Done</div>
+        <div class="stat-breakdown">
+            <span class="badge badge-gray"><?php echo $stats['pending_reviews']; ?> Pending</span>
+        </div>
+    </div>
+</div>
+
+<div class="charts-section">
     <div class="chart-container">
         <h3>Paper Status Distribution</h3>
         <canvas id="statusChart"></canvas>
@@ -86,6 +173,7 @@ $reviewer_workload = $pdo->query("
             <thead>
                 <tr>
                     <th>Reviewer</th>
+                    <th>Institution</th>
                     <th>Assigned</th>
                     <th>Completed</th>
                     <th>Pending</th>
@@ -96,6 +184,7 @@ $reviewer_workload = $pdo->query("
                 <?php foreach ($reviewer_workload as $reviewer): ?>
                     <tr>
                         <td><?php echo htmlspecialchars($reviewer['first_name'] . ' ' . $reviewer['last_name']); ?></td>
+                        <td><?php echo htmlspecialchars($reviewer['institution'] ?? '-'); ?></td>
                         <td><?php echo $reviewer['assigned']; ?></td>
                         <td><?php echo $reviewer['completed']; ?></td>
                         <td><?php echo $reviewer['assigned'] - $reviewer['completed']; ?></td>
@@ -113,28 +202,21 @@ $reviewer_workload = $pdo->query("
             </tbody>
         </table>
     <?php else: ?>
-        <p>No reviewer data available.</p>
+        <p>No reviewers have been assigned papers yet.</p>
     <?php endif; ?>
-</div>
-
-<div class="v>
-    </div>
-    
-    <div class="stat-card">
-        <h3>Reviews</h3>
-        <div class="stat-number"><?php echo $stats['completed_reviews']; ?></div>
-        <div class="stat-details">
-            <div>Completed: <?php echo $stats['completed_reviews']; ?></div>
-            <div>Pending: <?php echo $stats['pending_reviews']; ?></div>
-        </div>
-    </div>
 </div>
 
 <div class="admin-actions">
     <h3>Quick Actions</h3>
     <div class="action-buttons">
         <a href="papers.php" class="btn btn-primary">Manage Papers</a>
- script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+        <a href="users.php" class="btn btn-primary">Manage Users</a>
+        <a href="assign_reviewers.php" class="btn btn-primary">Assign Reviewers</a>
+        <a href="make_decision.php" class="btn btn-secondary">Make Decisions</a>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 // Paper Status Distribution Pie Chart
 new Chart(document.getElementById('statusChart'), {
@@ -222,6 +304,76 @@ new Chart(document.getElementById('reviewsChart'), {
 </script>
 
 <style>
+.stats-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 1rem;
+    margin: 2rem 0;
+}
+
+.stat-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-align: center;
+    border-top: 4px solid #3498db;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.stat-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.stat-number {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #2c3e50;
+    line-height: 1;
+}
+
+.stat-label {
+    color: #7f8c8d;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-breakdown {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    justify-content: center;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white;
+}
+
+.badge-blue { background-color: #3498db; }
+.badge-orange { background-color: #f39c12; }
+.badge-green { background-color: #2ecc71; }
+.badge-red { background-color: #e74c3c; }
+.badge-gray { background-color: #95a5a6; }
+
+.stat-papers { grid-column: 1; border-top-color: #3498db; }
+.stat-authors { border-top-color: #9b59b6; }
+.stat-reviewers { border-top-color: #e67e22; }
+.stat-reviews { border-top-color: #16a085; }
+
 .charts-section {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -254,13 +406,14 @@ new Chart(document.getElementById('reviewsChart'), {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     margin: 2rem 0;
 }
-</style>
 
-<       <a href="users.php" class="btn btn-primary">Manage Users</a>
-        <a href="assign_reviewers.php" class="btn btn-primary">Assign Reviewers</a>
-        <a href="make_decision.php" class="btn btn-secondary">Make Decisions</a>
-    </div>
-</div>
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    .stat-papers { grid-column: 1; }
+}
+</style>
 
 <div class="recent-activity">
     <h3>Recent Submissions</h3>
