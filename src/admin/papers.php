@@ -13,7 +13,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
     $stmt = $pdo->query("
         SELECT p.id, p.title, p.status, p.submission_date, p.category, p.conference_track,
                u.first_name, u.last_name,
-               (SELECT COUNT(*) FROM reviews WHERE paper_id = p.id) as review_count
+               (SELECT COUNT(*) FROM reviewer_assignments WHERE paper_id = p.id) as review_count
         FROM papers p
         JOIN users u ON p.author_id = u.id
         WHERE p.is_active = 1
@@ -21,30 +21,14 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
     ");
     
     while ($row = $stmt->fetch()) {
-        fputcsv($output sortable-table">
-        <thead>
-            <tr>
-                <th>
-                    <a href="?<?php echo http_build_query(array_merge($_GET, ['sort' => 'title', 'order' => ($sort === 'title' && $order === 'ASC') ? 'DESC' : 'ASC'])); ?>">
-                        Title <?php if ($sort === 'title') echo $order === 'ASC' ? '↑' : '↓'; ?>
-                    </a>
-                </th>
-                <th>Author</th>
-                <th>
-                    <a href="?<?php echo http_build_query(array_merge($_GET, ['sort' => 'status', 'order' => ($sort === 'status' && $order === 'ASC') ? 'DESC' : 'ASC'])); ?>">
-                        Status <?php if ($sort === 'status') echo $order === 'ASC' ? '↑' : '↓'; ?>
-                    </a>
-                </th>
-                <th>
-                    <a href="?<?php echo http_build_query(array_merge($_GET, ['sort' => 'submission_date', 'order' => ($sort === 'submission_date' && $order === 'ASC') ? 'DESC' : 'ASC'])); ?>">
-                        Submitted <?php if ($sort === 'submission_date') echo $order === 'ASC' ? '↑' : '↓'; ?>
-                    </a>
-                </th>
-                <th>
-                    <a href="?<?php echo http_build_query(array_merge($_GET, ['sort' => 'review_count', 'order' => ($sort === 'review_count' && $order === 'ASC') ? 'DESC' : 'ASC'])); ?>">
-                        Reviews <?php if ($sort === 'review_count') echo $order === 'ASC' ? '↑' : '↓'; ?>
-                    </a>
-                ],
+        fputcsv($output, [
+            $row['id'],
+            $row['title'],
+            $row['first_name'] . ' ' . $row['last_name'],
+            ucfirst(str_replace('_', ' ', $row['status'])),
+            date('Y-m-d H:i', strtotime($row['submission_date'])),
+            $row['review_count'],
+            $row['category'],
             $row['conference_track']
         ]);
     }
@@ -105,7 +89,7 @@ $order = strtoupper($order) === 'ASC' ? 'ASC' : 'DESC';
 $stmt = $pdo->prepare("
     SELECT p.id, p.title, p.status, p.submission_date,
            u.first_name, u.last_name,
-           (SELECT COUNT(*) FROM reviews WHERE paper_id = p.id) as review_count
+           (SELECT COUNT(*) FROM reviewer_assignments WHERE paper_id = p.id) as review_count
     FROM papers p
     JOIN users u ON p.author_id = u.id
     WHERE $where_clause
@@ -167,7 +151,20 @@ $papers = $stmt->fetchAll();
                     <td>
                         <span class="status status-<?php echo $paper['status']; ?>">
                             <?php echo ucfirst(str_replace('_', ' ', $paper['status'])); ?>
-                 found matching your criteria.</p>
+                        </span>
+                    </td>
+                    <td><?php echo date('M j, Y', strtotime($paper['submission_date'])); ?></td>
+                    <td><?php echo $paper['review_count']; ?></td>
+                    <td>
+                        <a href="view_paper.php?id=<?php echo $paper['id']; ?>" class="btn btn-small">View</a>
+                        <a href="assign_reviewers.php?paper_id=<?php echo $paper['id']; ?>" class="btn btn-small">Assign</a>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+<?php else: ?>
+    <p>No papers found matching your criteria.</p>
 <?php endif; ?>
 
 <style>
@@ -213,22 +210,6 @@ $papers = $stmt->fetchAll();
         grid-template-columns: 1fr;
     }
 }
-</style      </td>
-                    <td><?php echo date('M j, Y', strtotime($paper['submission_date'])); ?></td>
-                    <td><?php echo $paper['review_count']; ?></td>
-                    <td>
-                        <a href="view_paper.php?id=<?php echo $paper['id']; ?>" class="btn btn-small">View</a>
-                        <a href="assign_reviewers.php?paper_id=<?php echo $paper['id']; ?>" class="btn btn-small">Assign</a>
-                        <?php if ($paper['status'] === 'under_review'): ?>
-                            <a href="make_decision.php?id=<?php echo $paper['id']; ?>" class="btn btn-small btn-primary">Decide</a>
-                        <?php endif; ?>
-                    </td>
-                </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
-<?php else: ?>
-    <p>No papers submitted yet.</p>
-<?php endif; ?>
+</style>
 
 <?php include '../includes/footer.php'; ?>
