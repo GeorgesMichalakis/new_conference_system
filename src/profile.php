@@ -15,16 +15,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     
     if ($action === 'update_profile') {
-        $full_name = sanitizeInput($_POST['full_name']);
+        $first_name = sanitizeInput($_POST['first_name']);
+        $last_name = sanitizeInput($_POST['last_name']);
         $email = sanitizeInput($_POST['email']);
-        $affiliation = sanitizeInput($_POST['affiliation']);
+        $institution = sanitizeInput($_POST['institution']);
+        $department = sanitizeInput($_POST['department']);
         $bio = sanitizeInput($_POST['bio']);
-        $research_interests = sanitizeInput($_POST['research_interests']);
-        $website = sanitizeInput($_POST['website']);
+        $expertise = sanitizeInput($_POST['expertise']);
         
         // Validation
-        if (empty($full_name) || empty($email)) {
-            $error = 'Name and email are required.';
+        if (empty($first_name) || empty($last_name) || empty($email)) {
+            $error = 'First name, last name, and email are required.';
         } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $error = 'Invalid email address.';
         } else {
@@ -38,12 +39,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Update user profile
                 $stmt = $pdo->prepare("
                     UPDATE users 
-                    SET full_name = ?, email = ?, affiliation = ?, bio = ?, 
-                        research_interests = ?, website = ?, updated_at = NOW()
+                    SET first_name = ?, last_name = ?, email = ?, institution = ?, 
+                        department = ?, bio = ?, expertise = ?, updated_at = NOW()
                     WHERE id = ?
                 ");
                 
-                if ($stmt->execute([$full_name, $email, $affiliation, $bio, $research_interests, $website, $user_id])) {
+                if ($stmt->execute([$first_name, $last_name, $email, $institution, $department, $bio, $expertise, $user_id])) {
                     $success = 'Profile updated successfully!';
                     // Refresh user data
                     $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
@@ -102,35 +103,41 @@ include 'includes/header.php';
             <input type="hidden" name="action" value="update_profile">
             
             <div class="form-group">
-                <label for="full_name">Full Name: *</label>
-                <input type="text" id="full_name" name="full_name" required 
-                       value="<?php echo htmlspecialchars($user['full_name']); ?>">
+                <label for="first_name">First Name: *</label>
+                <input type="text" id="first_name" name="first_name" required 
+                       value="<?php echo htmlspecialchars($user['first_name'] ?? ''); ?>">
+            </div>
+            
+            <div class="form-group">
+                <label for="last_name">Last Name: *</label>
+                <input type="text" id="last_name" name="last_name" required 
+                       value="<?php echo htmlspecialchars($user['last_name'] ?? ''); ?>">
             </div>
             
             <div class="form-group">
                 <label for="email">Email: *</label>
                 <input type="email" id="email" name="email" required 
-                       value="<?php echo htmlspecialchars($user['email']); ?>">
+                       value="<?php echo htmlspecialchars($user['email'] ?? ''); ?>">
             </div>
             
             <div class="form-group">
-                <label for="affiliation">Affiliation:</label>
-                <input type="text" id="affiliation" name="affiliation" 
-                       value="<?php echo htmlspecialchars($user['affiliation'] ?? ''); ?>"
+                <label for="institution">Institution:</label>
+                <input type="text" id="institution" name="institution" 
+                       value="<?php echo htmlspecialchars($user['institution'] ?? ''); ?>"
                        placeholder="University or Organization">
             </div>
             
             <div class="form-group">
-                <label for="website">Website:</label>
-                <input type="url" id="website" name="website" 
-                       value="<?php echo htmlspecialchars($user['website'] ?? ''); ?>"
-                       placeholder="https://example.com">
+                <label for="department">Department:</label>
+                <input type="text" id="department" name="department" 
+                       value="<?php echo htmlspecialchars($user['department'] ?? ''); ?>"
+                       placeholder="e.g., Computer Science">
             </div>
             
             <div class="form-group">
-                <label for="research_interests">Research Interests:</label>
-                <textarea id="research_interests" name="research_interests" rows="4"
-                          placeholder="Machine Learning, Natural Language Processing, etc."><?php echo htmlspecialchars($user['research_interests'] ?? ''); ?></textarea>
+                <label for="expertise">Expertise:</label>
+                <textarea id="expertise" name="expertise" rows="3"
+                          placeholder="Machine Learning, Natural Language Processing, etc."><?php echo htmlspecialchars($user['expertise'] ?? ''); ?></textarea>
             </div>
             
             <div class="form-group">

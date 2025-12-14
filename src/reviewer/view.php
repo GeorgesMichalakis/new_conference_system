@@ -10,8 +10,9 @@ $stmt = $pdo->prepare("
            r.id as review_id, r.review_status
     FROM papers p
     JOIN users u ON p.author_id = u.id
-    JOIN reviews r ON p.id = r.paper_id
-    WHERE p.id = ? AND r.reviewer_id = ? AND p.is_active = 1
+    JOIN reviewer_assignments ra ON p.id = ra.paper_id
+    LEFT JOIN reviews r ON p.id = r.paper_id AND ra.reviewer_id = r.reviewer_id
+    WHERE p.id = ? AND ra.reviewer_id = ? AND p.is_active = 1
 ");
 $stmt->execute([$paper_id, $_SESSION['user_id']]);
 $paper = $stmt->fetch();

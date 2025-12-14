@@ -7,11 +7,13 @@ $paper_id = $_GET['id'] ?? 0;
 // Verify reviewer has access to this paper
 $stmt = $pdo->prepare("
     SELECT p.*, u.first_name, u.last_name,
+           ra.id as assignment_id, ra.deadline,
            r.id as review_id, r.review_status
     FROM papers p
     JOIN users u ON p.author_id = u.id
-    JOIN reviews r ON p.id = r.paper_id
-    WHERE p.id = ? AND r.reviewer_id = ? AND p.is_active = 1
+    JOIN reviewer_assignments ra ON p.id = ra.paper_id
+    LEFT JOIN reviews r ON p.id = r.paper_id AND ra.reviewer_id = r.reviewer_id
+    WHERE p.id = ? AND ra.reviewer_id = ? AND p.is_active = 1
 ");
 $stmt->execute([$paper_id, $_SESSION['user_id']]);
 $paper = $stmt->fetch();
@@ -21,7 +23,7 @@ if (!$paper) {
     redirect('/reviewer/');
 }
 
-if ($paper['review_status'] === 'completed') {
+if ($paper['review_id'] && $paper['review_status'] === 'completed') {
     redirect("edit_review.php?id={$paper['review_id']}");
 }
 
@@ -50,19 +52,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (empty($detailed_comments)) {
         $error = 'Detailed comments are required.';
     } else {
-        // Update the review
-        $stmt = $pdo->prepare("
-            UPDATE reviews SET 
-                overall_rating = ?, technical_quality = ?, novelty = ?, 
-                significance = ?, clarity = ?, recommendation = ?,
-                detailed_comments = ?, confidential_comments = ?,
-                review_status = 'completed', submitted_date = NOW()
-            WHERE id = ?
-        ");
+        // Insert or update the review
+        if ($paper['review_id']) {
+            // Update existing review
+            $stmt = $pdo->prepare("
+                UPDATE reviews SET 
+                    overall_rating = ?, technical_quality = ?, novelty = ?, 
+                    significance = ?, clarity = ?, recommendation = ?,
+                    detailed_comments = ?, confidential_comments = ?,
+                    review_status = 'completed', submitted_date = NOW()
+                WHERE id = ?
+            ");
+            $success = $stmt->execute([$overall_rating, $technical_quality, $novelty, 
+                               $significance, $clarity, $recommendation,
+                               $detailed_comments, $confidential_comments, $paper['review_id']]);
+        } else {
+            // Insert new review
+            $stmt = $pdo->prepare("
+                INSERT INTO reviews (
+                    paper_id, reviewer_id, overall_rating, technical_quality, 
+                    novelty, significance, clarity, recommendation,
+                    detailed_comments, confidential_comments, 
+                    review_status, submitted_date
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', NOW())
+            ");
+            $success = $stmt->execute([$paper_id, $_SESSION['user_id'], 
+                               $overall_rating, $technical_quality, $novelty, 
+                               $significance, $clarity, $recommendation,
+                               $detailed_comments, $confidential_comments]);
+        }
         
-        if ($stmt->execute([$overall_rating, $technical_quality, $novelty, 
-                           $significance, $clarity, $recommendation,
-                           $detailed_comments, $confidential_comments, $paper['review_id']])) {
+        if ($success) {
             $_SESSION['success'] = 'Review submitted successfully!';
             redirect('/reviewer/');
         } else {

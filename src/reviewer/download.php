@@ -8,8 +8,8 @@ $paper_id = $_GET['id'] ?? 0;
 $stmt = $pdo->prepare("
     SELECT p.file_path, p.file_name
     FROM papers p
-    JOIN reviews r ON p.id = r.paper_id
-    WHERE p.id = ? AND r.reviewer_id = ? AND p.is_active = 1
+    JOIN reviewer_assignments ra ON p.id = ra.paper_id
+    WHERE p.id = ? AND ra.reviewer_id = ? AND p.is_active = 1
 ");
 $stmt->execute([$paper_id, $_SESSION['user_id']]);
 $paper = $stmt->fetch();
