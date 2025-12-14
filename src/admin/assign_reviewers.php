@@ -26,16 +26,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign_reviewer'])) {
     $deadline = $_POST['deadline'];
     
     // Check if assignment already exists
-    $stmt = $pdo->prepare("SELECT id FROM reviews WHERE paper_id = ? AND reviewer_id = ?");
+    $stmt = $pdo->prepare("SELECT id FROM reviewer_assignments WHERE paper_id = ? AND reviewer_id = ?");
     $stmt->execute([$paper_id, $reviewer_id]);
     
     if ($stmt->fetch()) {
         $error = 'This reviewer is already assigned to this paper.';
     } else {
-        // Create review assignment
-        $stmt = $pdo->prepare("INSERT INTO reviews (paper_id, reviewer_id, assigned_date, deadline) VALUES (?, ?, NOW(), ?)");
+        // Create reviewer assignment
+        $stmt = $pdo->prepare("INSERT INTO reviewer_assignments (paper_id, reviewer_id, assigned_by, assigned_date, deadline, status) VALUES (?, ?, ?, NOW(), ?, 'pending')");
         
-        if ($stmt->execute([$paper_id, $reviewer_id, $deadline])) {
+        if ($stmt->execute([$paper_id, $reviewer_id, $_SESSION['user_id'], $deadline])) {
             // Update paper status to under_review if it's still submitted
             $pdo->prepare("UPDATE papers SET status = 'under_review' WHERE id = ? AND status = 'submitted'")->execute([$paper_id]);
             
@@ -55,7 +55,7 @@ $papers_needing_reviewers = [];
 if (!$paper_id) {
     $stmt = $pdo->query("
         SELECT p.id, p.title, u.first_name, u.last_name,
-               (SELECT COUNT(*) FROM reviews WHERE paper_id = p.id) as reviewer_count
+               (SELECT COUNT(*) FROM reviewer_assignments WHERE paper_id = p.id) as reviewer_count
         FROM papers p
         JOIN users u ON p.author_id = u.id
         WHERE p.is_active = 1 AND p.status IN ('submitted', 'under_review')
@@ -68,12 +68,14 @@ if (!$paper_id) {
 $current_assignments = [];
 if ($paper_id) {
     $stmt = $pdo->prepare("
-        SELECT r.id, r.review_status, r.deadline, r.assigned_date,
-               u.first_name, u.last_name, u.email
-        FROM reviews r
-        JOIN users u ON r.reviewer_id = u.id
-        WHERE r.paper_id = ?
-        ORDER BY r.assigned_date DESC
+        SELECT ra.id, ra.status, ra.deadline, ra.assigned_date,
+               u.first_name, u.last_name, u.email,
+               CASE WHEN r.id IS NOT NULL THEN 'completed' ELSE ra.status END as review_status
+        FROM reviewer_assignments ra
+        JOIN users u ON ra.reviewer_id = u.id
+        LEFT JOIN reviews r ON ra.paper_id = r.paper_id AND ra.reviewer_id = r.reviewer_id AND r.review_status = 'completed'
+        WHERE ra.paper_id = ?
+        ORDER BY ra.assigned_date DESC
     ");
     $stmt->execute([$paper_id]);
     $current_assignments = $stmt->fetchAll();

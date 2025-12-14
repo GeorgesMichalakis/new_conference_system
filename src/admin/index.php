@@ -237,7 +237,17 @@ new Chart(document.getElementById('statusChart'), {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-            legend: { position: 'bottom' }
+            legend: { 
+                position: 'right',
+                labels: {
+                    boxWidth: 15,
+                    padding: 10,
+                    font: { size: 11 }
+                }
+            }
+        },
+        layout: {
+            padding: 10
         }
     }
 });
