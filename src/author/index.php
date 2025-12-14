@@ -43,6 +43,12 @@ $papers = $stmt->fetchAll();
                     <td><?php echo htmlspecialchars($paper['file_name']); ?></td>
                     <td>
                         <a href="view.php?id=<?php echo $paper['id']; ?>" class="btn btn-small">View</a>
+                        <?php if (in_array($paper['status'], ['submitted', 'revision_required'])): ?>
+                            <a href="edit.php?id=<?php echo $paper['id']; ?>" class="btn btn-small btn-secondary">Edit</a>
+                        <?php endif; ?>
+                        <?php if ($paper['status'] === 'revision_required'): ?>
+                            <a href="revise.php?id=<?php echo $paper['id']; ?>" class="btn btn-small" style="background: #f39c12;">Revise</a>
+                        <?php endif; ?>
                     </td>
                 </tr>
             <?php endforeach; ?>

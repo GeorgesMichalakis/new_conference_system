@@ -27,12 +27,15 @@ CREATE TABLE `users` (
   `bio` text DEFAULT NULL,
   `expertise` text DEFAULT NULL,
   `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `reset_token` varchar(100) DEFAULT NULL,
+  `reset_token_expiry` datetime DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `email` (`email`),
   KEY `role` (`role`),
-  KEY `is_active` (`is_active`)
+  KEY `is_active` (`is_active`),
+  KEY `reset_token` (`reset_token`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------

@@ -58,7 +58,7 @@ $stats = $pdo->query("SELECT
         <a href="papers.php" class="btn btn-primary">Manage Papers</a>
         <a href="users.php" class="btn btn-primary">Manage Users</a>
         <a href="assign_reviewers.php" class="btn btn-primary">Assign Reviewers</a>
-        <a href="reviews.php" class="btn btn-secondary">View Reviews</a>
+        <a href="make_decision.php" class="btn btn-secondary">Make Decisions</a>
     </div>
 </div>
 

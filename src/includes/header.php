@@ -21,6 +21,7 @@
                         <li><a href="/author/">My Papers</a></li>
                         <li><a href="/author/submit.php">Submit Paper</a></li>
                     <?php endif; ?>
+                    <li><a href="/profile.php">Profile</a></li>
                     <li><a href="/logout.php">Logout</a></li>
                 <?php else: ?>
                     <li><a href="/login.php">Login</a></li>

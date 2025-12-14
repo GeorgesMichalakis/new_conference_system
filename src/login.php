@@ -71,6 +71,7 @@ include 'includes/header.php';
     </form>
     
     <p><a href="/register.php">Don't have an account? Register here</a></p>
+    <p><a href="/forgot_password.php">Forgot your password?</a></p>
     
     <div class="demo-credentials">
         <h4>Demo Credentials:</h4>
