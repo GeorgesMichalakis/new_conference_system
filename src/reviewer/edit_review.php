@@ -37,39 +37,39 @@ if (!in_array($paper_status, ['under_review', 'revision_required'])) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $rating = (int)$_POST['rating'];
+    $overall_rating = (int)$_POST['overall_rating'];
     $technical_quality = (int)$_POST['technical_quality'];
     $novelty = (int)$_POST['novelty'];
     $significance = (int)$_POST['significance'];
     $clarity = (int)$_POST['clarity'];
     $recommendation = sanitizeInput($_POST['recommendation']);
-    $comments = sanitizeInput($_POST['comments']);
+    $detailed_comments = sanitizeInput($_POST['detailed_comments']);
     $confidential_comments = sanitizeInput($_POST['confidential_comments']);
     
     // Validation
-    if ($rating < 1 || $rating > 10) {
+    if ($overall_rating < 1 || $overall_rating > 10) {
         $error = 'Overall rating must be between 1 and 10.';
     } elseif ($technical_quality < 1 || $technical_quality > 5 || 
               $novelty < 1 || $novelty > 5 ||
               $significance < 1 || $significance > 5 ||
               $clarity < 1 || $clarity > 5) {
         $error = 'All criteria ratings must be between 1 and 5.';
-    } elseif (!in_array($recommendation, ['strong_accept', 'accept', 'weak_accept', 'borderline', 'weak_reject', 'reject', 'strong_reject'])) {
+    } elseif (!in_array($recommendation, ['accept', 'minor_revision', 'major_revision', 'reject'])) {
         $error = 'Invalid recommendation.';
-    } elseif (empty($comments)) {
+    } elseif (empty($detailed_comments)) {
         $error = 'Comments for authors are required.';
     } else {
         // Update review
         $stmt = $pdo->prepare("
             UPDATE reviews 
-            SET rating = ?, technical_quality = ?, novelty = ?, significance = ?, 
-                clarity = ?, recommendation = ?, comments = ?, confidential_comments = ?,
+            SET overall_rating = ?, technical_quality = ?, novelty = ?, significance = ?, 
+                clarity = ?, recommendation = ?, detailed_comments = ?, confidential_comments = ?,
                 updated_at = NOW()
             WHERE id = ?
         ");
         
-        if ($stmt->execute([$rating, $technical_quality, $novelty, $significance, $clarity, 
-                           $recommendation, $comments, $confidential_comments, $review_id])) {
+        if ($stmt->execute([$overall_rating, $technical_quality, $novelty, $significance, $clarity, 
+                           $recommendation, $detailed_comments, $confidential_comments, $review_id])) {
             $_SESSION['success'] = 'Review updated successfully!';
             redirect('/reviewer/');
         } else {
@@ -87,7 +87,7 @@ include '../includes/header.php';
 <div class="paper-info">
     <h3><?php echo htmlspecialchars($review['paper_title']); ?></h3>
     <p><strong>Original Review Date:</strong> <?php echo date('F j, Y', strtotime($review['created_at'])); ?></p>
-    <?php if ($review['updated_at'] && $review['updated_at'] != $review['created_at']): ?>
+    <?php if (!empty($review['updated_at']) && $review['updated_at'] != $review['created_at']): ?>
         <p><strong>Last Updated:</strong> <?php echo date('F j, Y g:i A', strtotime($review['updated_at'])); ?></p>
     <?php endif; ?>
 </div>
@@ -101,9 +101,9 @@ include '../includes/header.php';
         <h3>Rating & Evaluation</h3>
         
         <div class="form-group">
-            <label for="rating">Overall Rating (1-10): *</label>
-            <input type="number" id="rating" name="rating" min="1" max="10" required 
-                   value="<?php echo $review['rating']; ?>">
+            <label for="overall_rating">Overall Rating (1-10): *</label>
+            <input type="number" id="overall_rating" name="overall_rating" min="1" max="10" required 
+                   value="<?php echo isset($review['overall_rating']) ? htmlspecialchars($review['overall_rating']) : ''; ?>">
             <small>1 = Poor, 10 = Excellent</small>
         </div>
         
@@ -111,13 +111,13 @@ include '../includes/header.php';
             <div class="form-group">
                 <label for="technical_quality">Technical Quality (1-5): *</label>
                 <input type="number" id="technical_quality" name="technical_quality" min="1" max="5" required 
-                       value="<?php echo $review['technical_quality']; ?>">
+                       value="<?php echo isset($review['technical_quality']) ? htmlspecialchars($review['technical_quality']) : ''; ?>">
             </div>
             
             <div class="form-group">
                 <label for="novelty">Novelty (1-5): *</label>
                 <input type="number" id="novelty" name="novelty" min="1" max="5" required 
-                       value="<?php echo $review['novelty']; ?>">
+                       value="<?php echo isset($review['novelty']) ? htmlspecialchars($review['novelty']) : ''; ?>">
             </div>
         </div>
         
@@ -125,13 +125,13 @@ include '../includes/header.php';
             <div class="form-group">
                 <label for="significance">Significance (1-5): *</label>
                 <input type="number" id="significance" name="significance" min="1" max="5" required 
-                       value="<?php echo $review['significance']; ?>">
+                       value="<?php echo isset($review['significance']) ? htmlspecialchars($review['significance']) : ''; ?>">
             </div>
             
             <div class="form-group">
                 <label for="clarity">Clarity (1-5): *</label>
                 <input type="number" id="clarity" name="clarity" min="1" max="5" required 
-                       value="<?php echo $review['clarity']; ?>">
+                       value="<?php echo isset($review['clarity']) ? htmlspecialchars($review['clarity']) : ''; ?>">
             </div>
         </div>
         
@@ -139,13 +139,10 @@ include '../includes/header.php';
             <label for="recommendation">Recommendation: *</label>
             <select id="recommendation" name="recommendation" required>
                 <option value="">Select...</option>
-                <option value="strong_accept" <?php echo $review['recommendation'] == 'strong_accept' ? 'selected' : ''; ?>>Strong Accept</option>
-                <option value="accept" <?php echo $review['recommendation'] == 'accept' ? 'selected' : ''; ?>>Accept</option>
-                <option value="weak_accept" <?php echo $review['recommendation'] == 'weak_accept' ? 'selected' : ''; ?>>Weak Accept</option>
-                <option value="borderline" <?php echo $review['recommendation'] == 'borderline' ? 'selected' : ''; ?>>Borderline</option>
-                <option value="weak_reject" <?php echo $review['recommendation'] == 'weak_reject' ? 'selected' : ''; ?>>Weak Reject</option>
-                <option value="reject" <?php echo $review['recommendation'] == 'reject' ? 'selected' : ''; ?>>Reject</option>
-                <option value="strong_reject" <?php echo $review['recommendation'] == 'strong_reject' ? 'selected' : ''; ?>>Strong Reject</option>
+                <option value="accept" <?php echo (isset($review['recommendation']) && $review['recommendation'] == 'accept') ? 'selected' : ''; ?>>Accept</option>
+                <option value="minor_revision" <?php echo (isset($review['recommendation']) && $review['recommendation'] == 'minor_revision') ? 'selected' : ''; ?>>Minor Revision</option>
+                <option value="major_revision" <?php echo (isset($review['recommendation']) && $review['recommendation'] == 'major_revision') ? 'selected' : ''; ?>>Major Revision</option>
+                <option value="reject" <?php echo (isset($review['recommendation']) && $review['recommendation'] == 'reject') ? 'selected' : ''; ?>>Reject</option>
             </select>
         </div>
     </div>
@@ -154,14 +151,14 @@ include '../includes/header.php';
         <h3>Comments</h3>
         
         <div class="form-group">
-            <label for="comments">Comments for Authors: *</label>
-            <textarea id="comments" name="comments" rows="12" required><?php echo htmlspecialchars($review['comments']); ?></textarea>
+            <label for="detailed_comments">Comments for Authors: *</label>
+            <textarea id="detailed_comments" name="detailed_comments" rows="12" required><?php echo isset($review['detailed_comments']) && $review['detailed_comments'] !== null ? htmlspecialchars($review['detailed_comments']) : ''; ?></textarea>
             <small>These comments will be shared with the authors</small>
         </div>
         
         <div class="form-group">
             <label for="confidential_comments">Confidential Comments for Editors:</label>
-            <textarea id="confidential_comments" name="confidential_comments" rows="6"><?php echo htmlspecialchars($review['confidential_comments'] ?? ''); ?></textarea>
+            <textarea id="confidential_comments" name="confidential_comments" rows="6"><?php echo htmlspecialchars(!empty($review['confidential_comments']) ? $review['confidential_comments'] : ''); ?></textarea>
             <small>These comments are only visible to editors and program chairs</small>
         </div>
     </div>
